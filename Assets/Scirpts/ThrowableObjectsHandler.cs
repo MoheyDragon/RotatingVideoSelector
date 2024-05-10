@@ -4,11 +4,17 @@ using UnityEngine;
 public class ThrowableObjectsHandler : Singletons<ThrowableObjectsHandler>
 {
     [SerializeField] float smoothTouchFollowing = 0.05f;
+    [Space]
+    [SerializeField] float throwVideoThreshold;
     [SerializeField] float throwVideoDuration = 1.5f;
-    [SerializeField] float throwAcceptedY;
-    [SerializeField] float throwVideoY;
+    [SerializeField] float throwTargetYPosition;
+    [Space]
+    [SerializeField] float returnAfterThrowDelay;
+    [SerializeField] float returnAfterThrowDuration;
+    [Space]
+    [SerializeField] float returnOnFailedSwipeDuration;
     public Action<int> OnVideoThrown;
-    const float  orbitalYPostion= 0.056f;
+    float  orbitalYPostion= 0.056f;
     const string throwableObjectTag = "throwableObject";
     private GameObject currentTouchedObject;
     private Camera mainCamera;
@@ -25,54 +31,65 @@ public class ThrowableObjectsHandler : Singletons<ThrowableObjectsHandler>
         {
             if (Input.GetMouseButtonUp(0) && currentTouchedObject)
             {
-                if (Input.mousePosition.y > throwAcceptedY)
-                    ThrowVideoToPlayer();
+                if (Input.mousePosition.y > throwVideoThreshold)
+                    ThrowVideoToSecondScreen();
                 else
-                    ReturnVideoToOrbit();
+                    ReturnVideoOnFailedSwipe();
             }
             if (!isMovingVideos)
-                if (currentTouchedObject != null)
             {
-                Vector3 mousePositionScreenSpace = Input.mousePosition;
-                Vector3 mousePositionWorldSpace = mainCamera.ScreenToWorldPoint(new Vector3(
+                if (currentTouchedObject != null)
+                {
+                    Vector3 mousePositionScreenSpace = Input.mousePosition;
+                    Vector3 mousePositionWorldSpace = mainCamera.ScreenToWorldPoint(new Vector3(
                     mousePositionScreenSpace.x, mousePositionScreenSpace.y, mainCamera.transform.position.y));
-                currentTouchedObject.transform.LeanMoveY(mousePositionWorldSpace.y, smoothTouchFollowing);
+                    currentTouchedObject.transform.LeanMoveY(mousePositionWorldSpace.y, smoothTouchFollowing);
+                }
             }
         }
-        if (SwipeInputHandler.isTouching) return;
-        if (Input.GetMouseButtonDown(0))
+        if (currentTouchedObject == null)
         {
-            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit) && hit.collider.CompareTag(throwableObjectTag))
+            if (Input.GetMouseButtonDown(0))
             {
-                OnObjectClicked(hit.collider.gameObject);
+                Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+                if (Physics.Raycast(ray, out RaycastHit hit) && hit.collider.CompareTag(throwableObjectTag))
+                {
+                    OnObjectClicked(hit.collider.gameObject);
+                }
             }
         }
     }
     private void OnObjectClicked(GameObject throwableObject)
     {
+        orbitalYPostion = throwableObject.transform.localPosition.y;
         SwipeInputHandler.isTouching = false;
         VideosOrbitRotater.Singleton.StopRotating();
         currentTouchedObject = throwableObject;
     }
-    private void ThrowVideoToPlayer()
+    private void ThrowVideoToSecondScreen()
     {
         isMovingVideos = true;
-        LeanTween.moveY(currentTouchedObject, throwVideoY, throwVideoDuration).setOnComplete(() =>
+        LeanTween.moveLocalY(currentTouchedObject, throwTargetYPosition, throwVideoDuration).setOnComplete(() =>
         {
             int videoIndex = currentTouchedObject.transform.GetSiblingIndex();
             OnVideoThrown?.Invoke(videoIndex);
-            ReturnVideoToOrbit();
+            Invoke(nameof(ReturnVideoAfterThrow), returnAfterThrowDelay);
         });
     }
-
-    private void ReturnVideoToOrbit()
+    private void ReturnVideoAfterThrow()
+    {
+        ReturnVideoToOrbit(returnAfterThrowDuration);
+    }
+    private void ReturnVideoOnFailedSwipe()
+    {
+        ReturnVideoToOrbit(returnOnFailedSwipeDuration);
+    }
+    private void ReturnVideoToOrbit(float returnDuration)
     {
         isMovingVideos = true;
-        LeanTween.moveY(currentTouchedObject, orbitalYPostion, smoothTouchFollowing).setOnComplete(() =>
+        LeanTween.moveLocalY(currentTouchedObject, orbitalYPostion, returnDuration).setOnComplete(() =>
         {
             isMovingVideos = false;
-            print("returned");
             currentTouchedObject = null;
             SwipeInputHandler.isTouching = true;
             VideosOrbitRotater.Singleton.StopRotating(false);

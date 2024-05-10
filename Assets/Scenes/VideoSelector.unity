@@ -1440,8 +1440,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   smoothTouchFollowing: 0.1
   throwVideoDuration: 1
-  throwAcceptedY: 500
-  throwVideoY: 20
+  throwVideoThreshold: 500
+  throwTargetYPosition: 10
+  returnAfterThrowDelay: 0
+  returnAfterThrowDuration: 1
+  returnOnFailedSwipeDuration: 0.5
 --- !u!1 &1560518780
 GameObject:
   m_ObjectHideFlags: 0
