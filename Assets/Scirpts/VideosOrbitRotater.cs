@@ -14,6 +14,39 @@ public class VideosOrbitRotater : Singletons<VideosOrbitRotater>
         positiveRotateSpeed = rotateSpeed;
         negativeRotateSpeed = -rotateSpeed;
         autoRotation=true;
+        PositionVideos();
+    }
+    private void PositionVideos()
+    {
+        int videosNum = transform.childCount;
+        Transform[] videos = new Transform[videosNum];
+        for (int i = 0; i < videosNum; i++)
+        {
+            videos[i]=transform.GetChild(i);
+        }
+        List<Vector3> cirularPositions = GetCircularPositions(videosNum);
+        for (int i = 0; i < videosNum; i++)
+        {
+            videos[i].localPosition = cirularPositions[i];
+        }
+
+    }
+    [SerializeField] private float radius = 1f;
+    public List<Vector3> GetCircularPositions(int numberOfObjects)
+    {
+        List<Vector3> positions = new List<Vector3>();
+        float angleStep = 360f / numberOfObjects; 
+
+        for (int i = 0; i < numberOfObjects; i++)
+        {
+            float angle = i * angleStep;
+            float radian = angle * Mathf.Deg2Rad;
+            float x = radius * Mathf.Cos(radian);
+            float z = radius * Mathf.Sin(radian);
+            positions.Add(new Vector3(x, 0.056f, z));
+        }
+
+        return positions;
     }
     private void RotateOrbit(Swipe swipe)
     {
