@@ -7,7 +7,7 @@ public class SwipeInputHandler : Singletons<SwipeInputHandler>
     public Action <Swipe>OnVerticalSwipDetected;
     [SerializeField] float verticalSwipeThreshold;
     [SerializeField] float horizontalSwipeThreshold;
-    public static bool isTouching;
+    public bool isTouching;
     Vector2 startPos;
     Vector2 endPos;
     float touchingStartingTime;

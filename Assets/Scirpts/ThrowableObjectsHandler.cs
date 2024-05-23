@@ -1,8 +1,11 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 public class ThrowableObjectsHandler : Singletons<ThrowableObjectsHandler>
 {
+    [SerializeField] float holdThresholdDuration=.5f;
+    WaitForSeconds holdThreshold;
     [SerializeField] float smoothTouchFollowing = 0.05f;
     [Space]
     [SerializeField] float throwVideoThreshold;
@@ -14,15 +17,17 @@ public class ThrowableObjectsHandler : Singletons<ThrowableObjectsHandler>
     [Space]
     [SerializeField] float returnOnFailedSwipeDuration;
     public Action<int> OnVideoThrown;
-    float  orbitalYPostion= 0.056f;
+    Vector3 positionInOrbit;
     const string throwableObjectTag = "throwableObject";
     private GameObject currentTouchedObject;
+    private GameObject possibleTouchedObject;
     private Camera mainCamera;
 
     protected override void Awake()
     {
         base.Awake();
         mainCamera = Camera.main; ;
+        holdThreshold= new WaitForSeconds(holdThresholdDuration);
     }
     bool isMovingVideos;
     void Update()
@@ -47,22 +52,39 @@ public class ThrowableObjectsHandler : Singletons<ThrowableObjectsHandler>
                 }
             }
         }
-        if (currentTouchedObject == null)
+        if (currentTouchedObject == null&&!isWaiting)
         {
             if (Input.GetMouseButtonDown(0))
             {
                 Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
                 if (Physics.Raycast(ray, out RaycastHit hit) && hit.collider.CompareTag(throwableObjectTag))
                 {
-                    OnObjectClicked(hit.collider.gameObject);
+                    possibleTouchedObject = hit.collider.gameObject;
+                    StartCoroutine(CO_StartWaitForSelectingVideo());
                 }
+            }
+        }
+    }
+    bool isWaiting;
+    IEnumerator CO_StartWaitForSelectingVideo()
+    {
+        isWaiting = true;
+        yield return holdThreshold;
+        isWaiting = false;
+        if(Input.GetMouseButton(0))
+        {
+            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out RaycastHit hit) && hit.collider.CompareTag(throwableObjectTag))
+            {
+                if(possibleTouchedObject == hit.collider.gameObject)
+                    OnObjectClicked(hit.collider.gameObject);
             }
         }
     }
     private void OnObjectClicked(GameObject throwableObject)
     {
-        orbitalYPostion = throwableObject.transform.localPosition.y;
-        SwipeInputHandler.isTouching = false;
+        positionInOrbit = throwableObject.transform.localPosition;
+        SwipeInputHandler.Singleton.isTouching = true;
         VideosOrbitRotater.Singleton.StopRotating();
         currentTouchedObject = throwableObject;
     }
@@ -87,11 +109,11 @@ public class ThrowableObjectsHandler : Singletons<ThrowableObjectsHandler>
     private void ReturnVideoToOrbit(float returnDuration)
     {
         isMovingVideos = true;
-        LeanTween.moveLocalY(currentTouchedObject, orbitalYPostion, returnDuration).setOnComplete(() =>
+        LeanTween.moveLocal(currentTouchedObject, positionInOrbit, returnDuration).setOnComplete(() =>
         {
             isMovingVideos = false;
             currentTouchedObject = null;
-            SwipeInputHandler.isTouching = true;
+            SwipeInputHandler.Singleton.isTouching = false;
             VideosOrbitRotater.Singleton.StopRotating(false);
         });
     }
